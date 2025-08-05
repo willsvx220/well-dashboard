@@ -70,6 +70,12 @@
         let fullData = []; // 🆕 Store raw sheet data
         let currentRange = "all"; // 🆕 default range
 
+        function parseTimestamp(tsString) {
+            // Your sheet probably uses "yyyy-mm-dd hh:mm:ss"
+            const parsed = new Date(tsString);
+            return isNaN(parsed) ? null : parsed;
+        }
+
         function fetchAndUpdateData() {
             Papa.parse(csvUrl, {
                 download: true,
