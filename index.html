@@ -121,9 +121,11 @@
                 ? fullData.filter(row => {
                     const rawTs = row["Timestamp"];
                     const ts = parseTimestamp(rawTs);  // ✅ use helper function
+                    console.log("Checking row:", rawTs, "Parsed:", ts, "Limit:", rangeLimit); // 🧪 Debug line
                     return ts && ts >= rangeLimit;
                 })
                 : fullData;
+
 
             updateChart(filtered);
         }
