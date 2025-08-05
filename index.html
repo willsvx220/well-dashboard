@@ -2,141 +2,120 @@
 <html>
 
 <head>
-    <title>Well Water Dashboard</title>
-    <meta charset="UTF-8">
-    <script src="https://cdn.jsdelivr.net/npm/tabletop@1.6.4/tabletop.min.js"></script>
-    <style>
-        body {
-            font-family: sans-serif;
-            padding: 2rem;
-            background-color: #f5f5f5;
-        }
+  <title>Well Water Dashboard</title>
+  <meta charset="UTF-8">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background-color: #f5f5f5;
+    }
 
-        #data {
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            margin: auto;
-        }
+    #data {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: auto;
+    }
 
-        h1 {
-            text-align: center;
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    h1 {
+      text-align: center;
+    }
 
+    canvas {
+      margin-top: 1rem;
+    }
+  </style>
 </head>
 
 <body>
-    <h1>Well Water Level</h1>
-    <div id="data">
-        <p><strong>Well:</strong> <span id="wellname">--</span></p>
-        <p><strong>Depth:</strong> <span id="depth">--</span> m</p>
-        <p><strong>Last Updated:</strong> <span id="timestamp">--</span></p>
-        <canvas id="depthChart" width="400" height="200"></canvas>
+  <h1>Well Water Level</h1>
+  <div id="data">
+    <p><strong>Well:</strong> <span id="wellname">--</span></p>
+    <p><strong>Depth:</strong> <span id="depth">--</span> m</p>
+    <p><strong>Last Updated:</strong> <span id="timestamp">--</span></p>
+    <canvas id="depthChart" width="400" height="200"></canvas>
+  </div>
 
-    </div>
+  <script>
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTP5lLM0F5IyG3Egj-z3VZ-6f5JlbekG0hS12FfJGSzmoPAUCQifjOyDot4TRl73kuDtRC2ST1DX3Xp/pub?output=csv";
+    let depthChart;
 
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const csvUrl =
-                "https://docs.google.com/spreadsheets/d/e/2PACX-1vTP5lLM0F5IyG3Egj-z3VZ-6f5JlbekG0hS12FfJGSzmoPAUCQifjOyDot4TRl73kuDtRC2ST1DX3Xp/pub?output=csv";
+    function fetchAndUpdateData() {
+      Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        complete: results => {
+          const data = results.data.filter(row => row["Depth"] && row["Timestamp"]);
+          if (!data.length) return;
 
-            Papa.parse(csvUrl, {
-                download: true,
-                header: true,
-                complete: results => {
-                    const data = results.data;
-                    if (!data.length) return;
-                    const latest = data[data.length - 1];
-                    document.getElementById("wellname").textContent = latest["Well Name"];
-                    document.getElementById("depth").textContent = parseFloat(latest["Depth"]).toFixed(2);
-                    document.getElementById("timestamp").textContent = latest["Timestamp"];
-                },
-                error: err => console.error("CSV load error:", err)
-            });
-        });
-        // Wrap in a function so we can call it repeatedly
-        function fetchAndUpdateData() {
-            const csvUrl =
-                "https://docs.google.com/spreadsheets/d/e/2PACX-1vTP5lLM0F5IyG3Egj-z3VZ-6f5JlbekG0hS12FfJGSzmoPAUCQifjOyDot4TRl73kuDtRC2ST1DX3Xp/pub?output=csv";
+          const latest = data[data.length - 1];
+          document.getElementById("wellname").textContent = latest["Well Name"];
+          document.getElementById("depth").textContent = parseFloat(latest["Depth"]).toFixed(2);
+          document.getElementById("timestamp").textContent = latest["Timestamp"];
 
-            Papa.parse(csvUrl, {
-                download: true,
-                header: true,
-                complete: results => {
-                    const data = results.data.filter(row => row["Depth"] && row["Timestamp"]);
-                    if (!data.length) return;
+          updateChart(data);
+        },
+        error: err => console.error("CSV load error:", err)
+      });
+    }
 
-                    const latest = data[data.length - 1];
-                    document.getElementById("wellname").textContent = latest["Well Name"];
-                    document.getElementById("depth").textContent = parseFloat(latest["Depth"]).toFixed(2);
-                    document.getElementById("timestamp").textContent = latest["Timestamp"];
+    function updateChart(data) {
+      const labels = data.map(row => row["Timestamp"]);
+      const values = data.map(row => parseFloat(row["Depth"]));
 
-                    // Update chart
-                    updateChart(data);
-                },
-                error: err => console.error("CSV load error:", err)
-            });
-        }
+      const chartData = {
+        labels,
+        datasets: [{
+          label: "Water Depth (m)",
+          data: values,
+          fill: false,
+          borderColor: "blue",
+          tension: 0.2
+        }]
+      };
 
-        let depthChart;
-
-        function updateChart(data) {
-            const labels = data.map(row => row["Timestamp"]);
-            const values = data.map(row => parseFloat(row["Depth"]));
-
-            const chartData = {
-                labels,
-                datasets: [{
-                    label: "Water Depth (m)",
-                    data: values,
-                    fill: false,
-                    borderColor: "blue",
-                    tension: 0.1
-                }]
-            };
-
-            const config = {
-                type: "line",
-                data: chartData,
-                options: {
-                    scales: {
-                        x: {
-                            ticks: { maxTicksLimit: 10 }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Depth (m)'
-                            }
-                        }
-                    }
-                }
-            };
-
-            if (depthChart) {
-                depthChart.data = chartData;
-                depthChart.update();
-            } else {
-                const ctx = document.getElementById("depthChart").getContext("2d");
-                depthChart = new Chart(ctx, config);
+      const config = {
+        type: "line",
+        data: chartData,
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              ticks: {
+                maxTicksLimit: 10,
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Depth (m)'
+              }
             }
+          }
         }
+      };
 
+      if (depthChart) {
+        depthChart.data = chartData;
+        depthChart.update();
+      } else {
+        const ctx = document.getElementById("depthChart").getContext("2d");
+        depthChart = new Chart(ctx, config);
+      }
+    }
 
-        // Initial load
-        document.addEventListener("DOMContentLoaded", fetchAndUpdateData);
+    // Load on page load
+    document.addEventListener("DOMContentLoaded", fetchAndUpdateData);
 
-        // 🔄 Auto-refresh every 60 seconds
-        setInterval(fetchAndUpdateData, 60000);
-
-    </script>
-
+    // Auto-refresh every 60 seconds
+    setInterval(fetchAndUpdateData, 60000);
+  </script>
 </body>
 
 </html>
