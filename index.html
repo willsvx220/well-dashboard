@@ -101,7 +101,7 @@
 
         // 🆕 Filter and update chart
         function applyFilterAndUpdateChart() {
-            let now = new Date();
+            const now = new Date(); // 🟢 Move this INSIDE the function to update every call
             let rangeLimit = null;
 
             switch (currentRange) {
@@ -124,12 +124,11 @@
             const filtered = rangeLimit
                 ? fullData.filter(row => {
                     const rawTs = row["Timestamp"];
-                    const ts = parseTimestamp(rawTs);  // ✅ use helper function
-                    console.log("Checking row:", rawTs, "Parsed:", ts, "Limit:", rangeLimit); // 🧪 Debug line
+                    const ts = parseTimestamp(rawTs);
+                    console.log("Checking row:", rawTs, "Parsed:", ts, "Limit:", rangeLimit);
                     return ts && ts >= rangeLimit;
                 })
                 : fullData;
-
 
             updateChart(filtered);
         }
