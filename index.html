@@ -71,10 +71,14 @@
         let currentRange = "all"; // 🆕 default range
 
         function parseTimestamp(tsString) {
-            // Your sheet probably uses "yyyy-mm-dd hh:mm:ss"
-            const parsed = new Date(tsString);
-            return isNaN(parsed) ? null : parsed;
+            // Convert "DD/MM/YYYY HH:mm:ss" → a real Date object
+            const match = tsString.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+            if (!match) return null;
+
+            const [, day, month, year, hour, minute, second] = match.map(Number);
+            return new Date(year, month - 1, day, hour, minute, second);
         }
+
 
         function fetchAndUpdateData() {
             Papa.parse(csvUrl, {
