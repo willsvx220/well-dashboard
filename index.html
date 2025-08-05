@@ -2,181 +2,183 @@
 <html>
 
 <head>
-  <title>Well Water Dashboard</title>
-  <meta charset="UTF-8">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-      background-color: #f5f5f5;
-    }
+    <title>Well Water Dashboard</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background-color: #f5f5f5;
+        }
 
-    #data {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      max-width: 600px;
-      margin: auto;
-    }
+        #data {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: auto;
+        }
 
-    h1 {
-      text-align: center;
-    }
+        h1 {
+            text-align: center;
+        }
 
-    canvas {
-      margin-top: 1rem;
-    }
+        canvas {
+            margin-top: 1rem;
+        }
 
-    #filter-container {
-      text-align: center;
-      margin-bottom: 1rem;
-    }
+        #filter-container {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
 
-    select {
-      padding: 0.4rem;
-      font-size: 1rem;
-    }
-  </style>
+        select {
+            padding: 0.4rem;
+            font-size: 1rem;
+        }
+    </style>
 </head>
 
 <body>
-  <h1>Well Water Level</h1>
+    <h1>Well Water Level</h1>
 
-  <!-- 🆕 Filter Dropdown -->
-  <div id="filter-container">
-    <label for="rangeSelect"><strong>View:</strong></label>
-    <select id="rangeSelect">
-      <option value="all">All Time</option>
-      <option value="1y">Last 1 Year</option>
-      <option value="30d">Last 30 Days</option>
-      <option value="7d">Last 7 Days</option>
-      <option value="24h">Last 24 Hours</option>
-    </select>
-  </div>
+    <!-- 🆕 Filter Dropdown -->
+    <div id="filter-container">
+        <label for="rangeSelect"><strong>View:</strong></label>
+        <select id="rangeSelect">
+            <option value="all">All Time</option>
+            <option value="1y">Last 1 Year</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="24h">Last 24 Hours</option>
+        </select>
+    </div>
 
-  <div id="data">
-    <p><strong>Well:</strong> <span id="wellname">--</span></p>
-    <p><strong>Depth:</strong> <span id="depth">--</span> m</p>
-    <p><strong>Last Updated:</strong> <span id="timestamp">--</span></p>
-    <canvas id="depthChart" width="400" height="200"></canvas>
-  </div>
+    <div id="data">
+        <p><strong>Well:</strong> <span id="wellname">--</span></p>
+        <p><strong>Depth:</strong> <span id="depth">--</span> m</p>
+        <p><strong>Last Updated:</strong> <span id="timestamp">--</span></p>
+        <canvas id="depthChart" width="400" height="200"></canvas>
+    </div>
 
-  <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTP5lLM0F5IyG3Egj-z3VZ-6f5JlbekG0hS12FfJGSzmoPAUCQifjOyDot4TRl73kuDtRC2ST1DX3Xp/pub?output=csv";
-    let depthChart;
-    let fullData = []; // 🆕 Store raw sheet data
-    let currentRange = "all"; // 🆕 default range
+    <script>
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTP5lLM0F5IyG3Egj-z3VZ-6f5JlbekG0hS12FfJGSzmoPAUCQifjOyDot4TRl73kuDtRC2ST1DX3Xp/pub?output=csv";
+        let depthChart;
+        let fullData = []; // 🆕 Store raw sheet data
+        let currentRange = "all"; // 🆕 default range
 
-    function fetchAndUpdateData() {
-      Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        complete: results => {
-          fullData = results.data.filter(row => row["Depth"] && row["Timestamp"]);
-          if (!fullData.length) return;
+        function fetchAndUpdateData() {
+            Papa.parse(csvUrl, {
+                download: true,
+                header: true,
+                complete: results => {
+                    fullData = results.data.filter(row => row["Depth"] && row["Timestamp"]);
+                    if (!fullData.length) return;
 
-          const latest = fullData[fullData.length - 1];
-          document.getElementById("wellname").textContent = latest["Well Name"];
-          document.getElementById("depth").textContent = parseFloat(latest["Depth"]).toFixed(2);
-          document.getElementById("timestamp").textContent = latest["Timestamp"];
+                    const latest = fullData[fullData.length - 1];
+                    document.getElementById("wellname").textContent = latest["Well Name"];
+                    document.getElementById("depth").textContent = parseFloat(latest["Depth"]).toFixed(2);
+                    document.getElementById("timestamp").textContent = latest["Timestamp"];
 
-          applyFilterAndUpdateChart();
-        },
-        error: err => console.error("CSV load error:", err)
-      });
-    }
-
-    // 🆕 Filter and update chart
-    function applyFilterAndUpdateChart() {
-      let now = new Date();
-      let rangeLimit = null;
-
-      switch (currentRange) {
-        case "24h":
-          rangeLimit = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
-        case "7d":
-          rangeLimit = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case "30d":
-          rangeLimit = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case "1y":
-          rangeLimit = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          rangeLimit = null; // show all
-      }
-
-      const filtered = rangeLimit
-        ? fullData.filter(row => {
-            const ts = new Date(row["Timestamp"]);
-            return ts >= rangeLimit;
-          })
-        : fullData;
-
-      updateChart(filtered);
-    }
-
-    function updateChart(data) {
-      const labels = data.map(row => row["Timestamp"]);
-      const values = data.map(row => parseFloat(row["Depth"]));
-
-      const chartData = {
-        labels,
-        datasets: [{
-          label: "Water Depth (m)",
-          data: values,
-          fill: false,
-          borderColor: "blue",
-          tension: 0.2
-        }]
-      };
-
-      const config = {
-        type: "line",
-        data: chartData,
-        options: {
-          responsive: true,
-          scales: {
-            x: {
-              ticks: { maxTicksLimit: 10 }
-            },
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Depth (m)'
-              }
-            }
-          }
+                    applyFilterAndUpdateChart();
+                },
+                error: err => console.error("CSV load error:", err)
+            });
         }
-      };
 
-      if (depthChart) {
-        depthChart.data = chartData;
-        depthChart.update();
-      } else {
-        const ctx = document.getElementById("depthChart").getContext("2d");
-        depthChart = new Chart(ctx, config);
-      }
-    }
+        // 🆕 Filter and update chart
+        function applyFilterAndUpdateChart() {
+            let now = new Date();
+            let rangeLimit = null;
 
-    // 🆕 Range dropdown event
-    document.getElementById("rangeSelect").addEventListener("change", (e) => {
-      currentRange = e.target.value;
-      applyFilterAndUpdateChart();
-    });
+            switch (currentRange) {
+                case "24h":
+                    rangeLimit = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    break;
+                case "7d":
+                    rangeLimit = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case "30d":
+                    rangeLimit = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                case "1y":
+                    rangeLimit = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    break;
+                default:
+                    rangeLimit = null;
+            }
 
-    // Load on page load
-    document.addEventListener("DOMContentLoaded", fetchAndUpdateData);
+            const filtered = rangeLimit
+                ? fullData.filter(row => {
+                    const rawTs = row["Timestamp"];
+                    const ts = parseTimestamp(rawTs);  // ✅ use helper function
+                    return ts && ts >= rangeLimit;
+                })
+                : fullData;
 
-    // Auto-refresh every 60 seconds
-    setInterval(fetchAndUpdateData, 60000);
-  </script>
+            updateChart(filtered);
+        }
+
+
+        function updateChart(data) {
+            const labels = data.map(row => row["Timestamp"]);
+            const values = data.map(row => parseFloat(row["Depth"]));
+
+            const chartData = {
+                labels,
+                datasets: [{
+                    label: "Water Depth (m)",
+                    data: values,
+                    fill: false,
+                    borderColor: "blue",
+                    tension: 0.2
+                }]
+            };
+
+            const config = {
+                type: "line",
+                data: chartData,
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            ticks: { maxTicksLimit: 10 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Depth (m)'
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (depthChart) {
+                depthChart.data = chartData;
+                depthChart.update();
+            } else {
+                const ctx = document.getElementById("depthChart").getContext("2d");
+                depthChart = new Chart(ctx, config);
+            }
+        }
+
+        // 🆕 Range dropdown event
+        document.getElementById("rangeSelect").addEventListener("change", (e) => {
+            currentRange = e.target.value;
+            applyFilterAndUpdateChart();
+        });
+
+        // Load on page load
+        document.addEventListener("DOMContentLoaded", fetchAndUpdateData);
+
+        // Auto-refresh every 60 seconds
+        setInterval(fetchAndUpdateData, 60000);
+    </script>
 </body>
 
 </html>
